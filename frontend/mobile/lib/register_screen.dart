@@ -1,42 +1,51 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_appauth/flutter_appauth.dart';
-import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'screen_home.dart';
 import 'msal_config.dart';
-import 'auth_service.dart';
-import 'register_screen.dart';
+import 'login_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
-  final FlutterAppAuth _appAuth = const FlutterAppAuth();
+  bool _obscureConfirmPassword = true;
 
-  // Đăng nhập với username/password từ database
-  Future<void> _login() async {
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _register() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    setState(() { _isLoading = true; });
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       final response = await http.post(
-        Uri.parse('$kBackendUrl/auth/login'),
+        Uri.parse('$kBackendUrl/auth/register'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'username': _usernameController.text.trim(),
+          'email': _emailController.text.trim(),
           'password': _passwordController.text,
         }),
       );
@@ -44,24 +53,25 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (response.statusCode == 200) {
-        // Login successful
-        final userData = json.decode(response.body);
-        final userName = userData['name'] ?? userData['username'];
-        final userEmail = userData['email'];
-
-        // Lưu thông tin local
-        await AuthService.saveUserInfo(userName, userEmail);
-
-        // Chuyển sang HomeScreen
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => HomeScreen(userName: userName)),
+        // Registration successful
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đăng ký thành công! Vui lòng đăng nhập.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate to login screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
         );
       } else {
-        // Login failed
+        // Registration failed
         final errorData = json.decode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errorData['detail'] ?? 'Đăng nhập thất bại'),
+            content: Text(errorData['detail'] ?? 'Đăng ký thất bại'),
             backgroundColor: Colors.red,
           ),
         );
@@ -76,60 +86,10 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } finally {
       if (mounted) {
-        setState(() { _isLoading = false; });
+        setState(() {
+          _isLoading = false;
+        });
       }
-    }
-  }
-
-  // Đăng nhập Microsoft SSO
-  void _loginWithMicrosoft() async {
-    setState(() { _isLoading = true; });
-
-    try {
-      // Chọn redirect URI dựa trên platform
-      String redirectUri = kRedirectUriAndroid;
-      if (Platform.isIOS) {
-        redirectUri = kRedirectUriIOS;
-      }
-
-      // Gọi OAuth flow
-      final AuthorizationTokenResponse? result = await _appAuth.authorizeAndExchangeCode(
-        AuthorizationTokenRequest(
-          kClientId,
-          redirectUri,
-          serviceConfiguration: const AuthorizationServiceConfiguration(
-            authorizationEndpoint: kAuthorizationEndpoint,
-            tokenEndpoint: kTokenEndpoint,
-            endSessionEndpoint: kEndSessionEndpoint,
-          ),
-          scopes: kScopes,
-        ),
-      );
-
-      if (result != null) {
-        // Lấy thông tin user từ ID token (decode JWT hoặc gọi Microsoft Graph API)
-        // Đơn giản hóa: giả sử lấy được name và email
-        final String userName = 'Microsoft User'; // TODO: parse từ result.idToken
-        final String userEmail = 'user@microsoft.com'; // TODO: parse từ result.idToken
-
-        // Gửi thông tin lên backend
-        await AuthService.sendUserToBackend(userName, userEmail, 'Microsoft');
-
-        // Lưu thông tin local
-        await AuthService.saveUserInfo(userName, userEmail);
-
-        // Chuyển sang HomeScreen
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => HomeScreen(userName: userName)),
-        );
-      }
-    } catch (e) {
-      print('Microsoft SSO error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi đăng nhập: $e')),
-      );
-    } finally {
-      setState(() { _isLoading = false; });
     }
   }
 
@@ -137,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Đăng nhập'),
+        title: const Text('Đăng ký tài khoản'),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -148,26 +108,27 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
                 
-                // Logo/Icon
+                // Icon
                 Icon(
-                  Icons.account_circle,
-                  size: 100,
+                  Icons.person_add,
+                  size: 80,
                   color: Theme.of(context).primaryColor,
                 ),
                 
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
                 
+                // Title
                 Text(
-                  'Chào mừng trở lại!',
+                  'Tạo tài khoản mới',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 
-                const SizedBox(height: 40),
+                const SizedBox(height: 30),
                 
                 // Username field
                 TextFormField(
@@ -183,6 +144,36 @@ class _LoginScreenState extends State<LoginScreen> {
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Vui lòng nhập tên đăng nhập';
+                    }
+                    if (value.length < 3) {
+                      return 'Tên đăng nhập phải có ít nhất 3 ký tự';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Email field
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    hintText: 'Nhập địa chỉ email',
+                    prefixIcon: const Icon(Icons.email),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Vui lòng nhập email';
+                    }
+                    // Basic email validation
+                    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                    if (!emailRegex.hasMatch(value)) {
+                      return 'Email không hợp lệ';
                     }
                     return null;
                   },
@@ -216,15 +207,53 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Vui lòng nhập mật khẩu';
                     }
+                    if (value.length < 6) {
+                      return 'Mật khẩu phải có ít nhất 6 ký tự';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Confirm Password field
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirmPassword,
+                  decoration: InputDecoration(
+                    labelText: 'Xác nhận mật khẩu',
+                    hintText: 'Nhập lại mật khẩu',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Vui lòng xác nhận mật khẩu';
+                    }
+                    if (value != _passwordController.text) {
+                      return 'Mật khẩu không khớp';
+                    }
                     return null;
                   },
                 ),
                 
                 const SizedBox(height: 24),
                 
-                // Login button
+                // Register button
                 ElevatedButton(
-                  onPressed: _isLoading ? null : _login,
+                  onPressed: _isLoading ? null : _register,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -241,61 +270,27 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         )
                       : const Text(
-                          'Đăng nhập',
+                          'Đăng ký',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                 ),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 
-                // Divider with OR
-                Row(
-                  children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'HOẶC',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ),
-                    const Expanded(child: Divider()),
-                  ],
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Microsoft SSO button
-                ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _loginWithMicrosoft,
-                  icon: const Icon(Icons.corporate_fare),
-                  label: const Text('Đăng nhập bằng Microsoft'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[700],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Register link
+                // Already have account
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Chưa có tài khoản? '),
+                    const Text('Đã có tài khoản? '),
                     TextButton(
                       onPressed: () {
-                        Navigator.push(
+                        Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                          MaterialPageRoute(builder: (context) => const LoginScreen()),
                         );
                       },
                       child: const Text(
-                        'Đăng ký ngay',
+                        'Đăng nhập',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),

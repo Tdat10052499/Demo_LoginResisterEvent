@@ -4,7 +4,7 @@ import 'auth_service.dart';
 
 class HomeScreen extends StatelessWidget {
   final String userName;
-  const HomeScreen({Key? key, required this.userName}) : super(key: key);
+  const HomeScreen({super.key, required this.userName});
 
   @override
   Widget build(BuildContext context) {
