@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from datetime import datetime
 
 class UserCreate(BaseModel):
     username: str
@@ -12,3 +13,18 @@ class UserRead(BaseModel):
 
     class Config:
         orm_mode = True
+
+class EventCreate(BaseModel):
+    name: str
+    email: str
+    phone: str | None = None
+
+class EventRead(BaseModel):
+    id: int
+    name: str
+    email: str
+    phone: str | None = None
+    registered_at: datetime
+
+    class Config:
+        from_attributes = True

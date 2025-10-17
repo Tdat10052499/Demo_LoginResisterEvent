@@ -5,6 +5,7 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import OperationalError
 from sqlalchemy import text
+from .routes import auth, event
 
 app = FastAPI(title="Login Register Event API")
 
@@ -30,3 +31,6 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(database.get_d
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
     return crud.create_user(db, user)
+
+app.include_router(auth.router)
+app.include_router(event.router)
