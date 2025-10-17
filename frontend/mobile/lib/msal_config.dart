@@ -1,7 +1,7 @@
 // Cấu hình Microsoft SSO
 // Bạn cần thay thế các giá trị placeholder sau khi đăng ký app trên Azure Portal
 
-const String kClientId = 'YOUR_AZURE_CLIENT_ID'; // Client ID từ Azure Portal
+const String kClientId = 'f0f9e0b2-d6ff-40c0-b0b5-9b6a9acf4abc'; // Client ID từ Azure Portal
 const String kRedirectUriAndroid = 'msauth://com.example.login_register_event/qitkjCObmVXTpHslEaOpznysgEk';
 const String kRedirectUriIOS = 'msauth.com.example.loginRegisterEvent://auth';
 
@@ -19,4 +19,7 @@ const List<String> kScopes = [
 ];
 
 // Backend API endpoint
+// Android Emulator: dùng 10.0.2.2 để trỏ đến localhost của máy host
+// iOS Simulator/Web: dùng localhost
+// Device thật: dùng IP của máy (ví dụ: http://192.168.1.x:8000)
 const String kBackendUrl = 'http://localhost:8000'; // Thay bằng URL backend thực tế
