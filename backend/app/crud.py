@@ -1,16 +1,21 @@
 from sqlalchemy.orm import Session
 from . import models, schemas
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    # bcrypt chỉ hỗ trợ tối đa 72 ký tự
+    password_bytes = plain_password[:72].encode('utf-8')
+    hashed_bytes = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(password_bytes, hashed_bytes)
 
 def get_password_hash(password: str) -> str:
     """Hash a password"""
-    return pwd_context.hash(password)
+    # bcrypt chỉ hỗ trợ tối đa 72 ký tự
+    password_bytes = password[:72].encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
 
 def get_user_by_username(db: Session, username: str):
     """Get user by username"""
@@ -33,7 +38,8 @@ def authenticate_user(db: Session, username: str, password: str):
 
 def create_user(db: Session, user: schemas.UserCreate):
     """Create a new user (legacy for SSO)"""
-    hashed_password = pwd_context.hash(user.password) if user.password else None
+    # bcrypt chỉ hỗ trợ tối đa 72 ký tự
+    hashed_password = get_password_hash(user.password) if user.password else None
     db_user = models.User(
         username=user.username,
         email=user.email,
@@ -56,6 +62,7 @@ def register_user(db: Session, user: schemas.UserRegister):
         return None
     
     # Create new user
+    # bcrypt chỉ hỗ trợ tối đa 72 ký tự (xử lý trong get_password_hash)
     hashed_password = get_password_hash(user.password)
     db_user = models.User(
         username=user.username,

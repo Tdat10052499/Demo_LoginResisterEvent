@@ -1,19 +1,71 @@
 # Database Migration Guide
 
+## ⚠️ Khi nào CẦN Migration?
+
+Bạn **CẦN CHẠY MIGRATION** nếu:
+
+✅ Bảng `users` **đã tồn tại** từ trước (schema cũ)  
+✅ Bảng `users` **thiếu các columns**: `username`, `hashed_password`  
+✅ Đã có **data** trong bảng users (SSO users)  
+
+Bạn **KHÔNG CẦN MIGRATION** nếu:
+
+❌ Bảng `users` **chưa tồn tại** (fresh database)  
+❌ Đây là **lần đầu tiên** chạy backend  
+
+---
+
 ## Áp dụng Migration
 
-### Option 1: Tự động (Recommended)
+### Option 1: Tự động với Python Script (RECOMMENDED) ✅
 
-Backend sẽ tự động tạo tables khi khởi động:
+Chạy script tự động check và migrate:
+
+```bash
+cd backend
+python migrate_database.py
+```
+
+Script sẽ:
+- ✅ Kiểm tra bảng users có tồn tại không
+- ✅ Kiểm tra columns `username` và `hashed_password` có chưa
+- ✅ Tự động thêm các columns thiếu
+- ✅ Update constraints (nullable)
+- ✅ Tạo indexes
+- ✅ Show kết quả migration
+
+**Output mẫu:**
+```
+🔍 Checking required columns...
+  ❌ Column 'username' not found - MIGRATION NEEDED
+  ❌ Column 'hashed_password' not found - MIGRATION NEEDED
+
+🚀 Starting migration...
+  📝 Adding 'username' column... ✅ Done
+  📝 Adding 'hashed_password' column... ✅ Done
+  ✅ Migration completed successfully!
+```
+
+---
+
+### Option 2: Backend Auto-create (cho fresh database)
+
+Nếu database **chưa có bảng users**, backend sẽ tự động tạo:
 
 ```bash
 cd backend
 python -m uvicorn app.main:app --reload
 ```
 
-### Option 2: Chạy SQL Script thủ công
+**Lưu ý:** Option này chỉ **TẠO BẢNG MỚI**, không update bảng đã tồn tại!
 
-Nếu cần update database đã có data:
+---
+
+### Option 3: Chạy SQL Script thủ công
+
+**Khi nào dùng:** Database production, cần kiểm soát chính xác
+
+**Cách 1: Dùng psql command line**
 
 ```bash
 # Connect to PostgreSQL
@@ -26,12 +78,22 @@ psql -U demo_user -d demo_app -h localhost
 \d users
 ```
 
-Hoặc dùng pgAdmin:
-1. Mở pgAdmin
-2. Connect to demo_app database
-3. Tools → Query Tool
+**Cách 2: Dùng pgAdmin (GUI)**
+
+1. Mở **pgAdmin**
+2. Connect to `demo_app` database
+3. Right-click database → **Query Tool**
 4. Paste nội dung file `migrations/001_add_auth_columns.sql`
-5. Execute (F5)
+5. Click **Execute (F5)**
+6. Check output: "ALTER TABLE" success messages
+
+**Cách 3: Dùng DBeaver / DataGrip**
+
+1. Connect to database
+2. Open SQL Editor
+3. Paste migration script
+4. Execute
+5. Refresh table structure
 
 ## Rollback (nếu cần)
 
