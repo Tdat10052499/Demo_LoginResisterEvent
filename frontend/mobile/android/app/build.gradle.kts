@@ -28,6 +28,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Microsoft SSO configuration
+        manifestPlaceholders["appAuthRedirectScheme"] = "msauth"
     }
 
     buildTypes {
