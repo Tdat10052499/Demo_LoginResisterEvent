@@ -22,4 +22,5 @@ const List<String> kScopes = [
 // Android Emulator: dùng 10.0.2.2 để trỏ đến localhost của máy host
 // iOS Simulator/Web: dùng localhost
 // Device thật: dùng IP của máy (ví dụ: http://192.168.1.x:8000)
-const String kBackendUrl = 'http://localhost:8000'; // Web/iOS Simulator
+// Android Emulator: 10.0.2.2, Web/iOS Simulator: localhost
+const String kBackendUrl = 'http://10.0.2.2:8000';
